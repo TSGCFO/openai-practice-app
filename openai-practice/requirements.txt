@@ -1,0 +1,26 @@
+# Core OpenAI client
+openai
+
+# Web API framework for chatbot backend
+fastapi
+uvicorn[standard]
+
+# Data validation / settings
+pydantic
+python-dotenv
+
+# HTTP & networking
+httpx
+websockets
+
+# Reliability / retries
+tenacity
+
+# Performance JSON (FastAPI response serialization)
+orjson
+
+# Logging
+loguru
+
+# Optional: caching / session / rate limiting store
+redis
