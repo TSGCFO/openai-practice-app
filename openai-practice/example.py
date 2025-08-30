@@ -1,12 +1,26 @@
 from openai import OpenAI
 from dotenv import load_dotenv
+from pathlib import Path
 import os
 import json
 
-load_dotenv()
+# Ensure we load the .env that sits next to this file (not just repo root)
+load_dotenv(dotenv_path=Path(__file__).with_name('.env'))
 
 api_key=os.getenv('OPENAI_API_KEY')
 
+# NEW: MCP server config from environment (no hardcoded secrets)
+mcp_label = os.getenv('MCP_RUBE_LABEL', 'rube')
+mcp_url = os.getenv('MCP_RUBE_URL')
+mcp_auth_header = os.getenv('MCP_RUBE_AUTH_HEADER', 'Authorization')
+mcp_auth_value = os.getenv('MCP_RUBE_AUTH_VALUE')
+# Allow all tools by default: only set allow-list if explicitly provided
+_mcp_tools_raw = os.getenv('MCP_RUBE_ALLOWED_TOOLS', '').strip()
+mcp_allowed_tools = [s.strip() for s in _mcp_tools_raw.split(',') if s.strip()]
+mcp_require_approval = os.getenv('MCP_REQUIRE_APPROVAL', 'never')
+
+if not mcp_url:
+  raise RuntimeError("MCP_RUBE_URL is not set. Provide your actual MCP server URL in the environment.")
 
 client = OpenAI()
 
@@ -45,28 +59,19 @@ response = client.responses.create(
   tools=[
     {
       "type": "web_search",
-     
       "search_context_size": "medium",
-     
     },
-    {
-      "type": "mcp",
-      "server_label": "rube",
-      "server_url": "https://rube.app/mcp",
-      "headers": {
-        "Authorization": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiJ1c2VyXzAxSzI1NzhXNEVXNDFNRzE0VlZaRk5HOFJGIiwib3JnSWQiOiJvcmdfMDFLMzE4NTROMjY4WTgyVFA2NTdHODUzNjAiLCJpYXQiOjE3NTY0ODM3ODJ9.iPktMAFSErIRmYf31iY0McO1gUDMWaxYcVly38KHpWE"
-      },
-      "allowed_tools": [
-        "RUBE_CREATE_PLAN",
-        "RUBE_MULTI_EXECUTE_TOOL",
-        "RUBE_REMOTE_BASH_TOOL",
-        "RUBE_REMOTE_WORKBENCH",
-        "RUBE_SEARCH_TOOLS",
-        "RUBE_MANAGE_CONNECTIONS",
-        "RUBE_WAIT_FOR_CONNECTION"
-      ],
-      "require_approval": "never"
-    }
+    (
+      (lambda: (
+        (lambda d: (mcp_allowed_tools and d.update({"allowed_tools": mcp_allowed_tools}) or d))({
+          "type": "mcp",
+          "server_label": mcp_label,
+          "server_url": mcp_url,
+          "headers": ({mcp_auth_header: mcp_auth_value} if mcp_auth_value else {}),
+          "require_approval": mcp_require_approval,
+        })
+      ))()
+    )
   ],
   store=True,
   include=[
