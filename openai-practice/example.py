@@ -75,8 +75,8 @@ response = client.responses.create(
   ]
 )
 
-# Try to pretty-print the response in a safe, readable way.
-# JSON `null` is valid inside strings returned by tools — it is not a Python identifier.
+# Try to extract a compact Gmail summary from the response and print it.
+# If extraction fails, fall back to a safe pretty-print of the whole response.
 try:
   # Prefer SDK-provided dict/serialization helpers if available
   if hasattr(response, "to_dict"):
@@ -99,9 +99,73 @@ try:
       except Exception:
         serializable = str(response)
 
-  # Use json.dumps to get readable JSON; ensure non-serializable objects are stringified
-  print(json.dumps(serializable, default=lambda o: str(o), indent=2))
+  # Recursive helpers to find message lists and keys
+  def find_messages(obj):
+    results = []
+    if isinstance(obj, dict):
+      for k, v in obj.items():
+        if k == "messages" and isinstance(v, list) and v and isinstance(v[0], dict):
+          results.append(v)
+        else:
+          results.extend(find_messages(v))
+    elif isinstance(obj, list):
+      for item in obj:
+        results.extend(find_messages(item))
+    return results
+
+  def find_key(obj, key):
+    if isinstance(obj, dict):
+      if key in obj:
+        return obj[key]
+      for v in obj.values():
+        found = find_key(v, key)
+        if found is not None:
+          return found
+    elif isinstance(obj, list):
+      for item in obj:
+        found = find_key(item, key)
+        if found is not None:
+          return found
+    return None
+
+  msg_lists = find_messages(serializable)
+  messages = msg_lists[0] if msg_lists else []
+
+  if messages:
+    summaries = []
+    for m in messages:
+      ts = m.get("messageTimestamp") or m.get("internalDate") or m.get("timestamp")
+      sender = m.get("sender") or m.get("from") or m.get("fromAddress")
+      subject = m.get("subject")
+      # preview may be nested
+      preview = ""
+      pv = m.get("preview")
+      if isinstance(pv, dict):
+        preview = pv.get("body") or pv.get("snippet") or ""
+      else:
+        preview = pv or m.get("snippet") or m.get("messageText") or ""
+
+      summaries.append({
+        "messageId": m.get("messageId") or m.get("id"),
+        "threadId": m.get("threadId"),
+        "timestamp": ts,
+        "sender": sender,
+        "subject": subject,
+        "preview": preview,
+      })
+
+    next_token = find_key(serializable, "nextPageToken") or find_key(serializable, "next_page_token")
+    out = {"messages": summaries}
+    if next_token:
+      out["nextPageToken"] = next_token
+
+    print(json.dumps(out, default=lambda o: str(o), indent=2))
+  else:
+    # No messages found; fall back to full pretty-print
+    print(json.dumps(serializable, default=lambda o: str(o), indent=2))
 except Exception as e:
-  # If anything goes wrong, fall back to a safe str() print and show the error
-  print("[Warning] Could not pretty-print response:", e)
-  print(str(response))
+  print("[Warning] Could not extract messages; falling back to pretty-print:", e)
+  try:
+    print(json.dumps(serializable, default=lambda o: str(o), indent=2))
+  except Exception:
+    print(str(response))
