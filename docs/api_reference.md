@@ -108,7 +108,7 @@ Authorization: Bearer {token}
 
 {
     "title": "New Conversation",
-    "model": "gpt-4",
+    "model": "gpt-5",
     "system_prompt": "You are a helpful assistant",
     "temperature": 0.7,
     "max_tokens": 4096
@@ -120,7 +120,7 @@ Authorization: Bearer {token}
     "title": "New Conversation",
     "created_at": "2024-01-01T00:00:00Z",
     "updated_at": "2024-01-01T00:00:00Z",
-    "model": "gpt-4",
+    "model": "gpt-5",
     "message_count": 0,
     "token_usage": {
         "prompt_tokens": 0,
@@ -169,7 +169,7 @@ Authorization: Bearer {token}
     "title": "Project Discussion",
     "created_at": "2024-01-01T00:00:00Z",
     "updated_at": "2024-01-01T00:00:00Z",
-    "model": "gpt-4",
+    "model": "gpt-5",
     "system_prompt": "You are a helpful assistant",
     "temperature": 0.7,
     "max_tokens": 4096,
@@ -261,7 +261,7 @@ Authorization: Bearer {token}
         }
     ],
     "metadata": {
-        "model": "gpt-4",
+        "model": "gpt-5",
         "finish_reason": "stop",
         "tokens_used": 250
     }
@@ -415,7 +415,7 @@ Authorization: Bearer {token}
     "name": "John Doe",
     "created_at": "2024-01-01T00:00:00Z",
     "preferences": {
-        "model": "gpt-4",
+        "model": "gpt-5",
         "language": "en",
         "timezone": "America/New_York",
         "theme": "dark"
@@ -436,7 +436,7 @@ Content-Type: application/json
 Authorization: Bearer {token}
 
 {
-    "model": "gpt-4",
+    "model": "gpt-5",
     "temperature": 0.8,
     "theme": "light",
     "notifications": {
@@ -448,7 +448,7 @@ Authorization: Bearer {token}
 # Response: 200 OK
 {
     "preferences": {
-        "model": "gpt-4",
+        "model": "gpt-5",
         "temperature": 0.8,
         "theme": "light",
         "notifications": {
@@ -1189,7 +1189,7 @@ curl -X POST https://api.ai-assistant.com/api/v1/auth/login \
 curl -X POST https://api.ai-assistant.com/api/v1/conversations \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"title": "New Chat", "model": "gpt-4"}'
+  -d '{"title": "New Chat", "model": "gpt-5"}'
 
 # Send message
 curl -X POST https://api.ai-assistant.com/api/v1/conversations/$CONV_ID/messages \
@@ -1281,7 +1281,7 @@ client = Client(
 # Create conversation
 conversation = client.conversations.create(
     title="Python SDK Test",
-    model="gpt-4",
+    model="gpt-5",
     temperature=0.7
 )
 
@@ -1318,7 +1318,7 @@ const client = new AIAssistant({
 // Create conversation
 const conversation = await client.conversations.create({
     title: 'TypeScript SDK Test',
-    model: 'gpt-4',
+    model: 'gpt-5',
     temperature: 0.7
 });
 

@@ -131,7 +131,7 @@ class ConversationService:
         self,
         user_id: str,
         title: str = None,
-        model: str = "gpt-4",
+        model: str = "gpt-5",
         system_prompt: str = None
     ) -> Conversation:
         """Create new conversation"""

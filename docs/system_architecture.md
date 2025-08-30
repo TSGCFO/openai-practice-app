@@ -88,7 +88,7 @@ graph TB
     end
     
     subgraph "AI/ML Layer"
-        OpenAI[OpenAI API<br/>- GPT-4<br/>- Embeddings<br/>- Functions]
+        OpenAI[OpenAI API<br/>- GPT-5<br/>- Embeddings<br/>- Functions]
         Vector[Vector DB<br/>- Pinecone<br/>- Memory Store]
     end
     

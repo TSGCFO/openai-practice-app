@@ -97,7 +97,7 @@ python app.py
 
 ### Core Capabilities
 
-- 🤖 **OpenAI Integration**: GPT-4/GPT-3.5 with streaming responses
+- 🤖 **OpenAI Integration**: GPT-5/GPT-5 with streaming responses
 - 🔧 **Extensible Tools**: MCP protocol for adding custom tools
 - 🔄 **Real-time Streaming**: WebSocket/SSE for instant responses
 - 🔐 **Secure Authentication**: OAuth2/JWT with multiple providers
@@ -144,7 +144,7 @@ Create a `.env` file in the root directory:
 ```env
 # OpenAI Configuration
 OPENAI_API_KEY=sk-your-api-key-here
-OPENAI_MODEL=gpt-4
+OPENAI_MODEL=gpt-5
 OPENAI_MAX_TOKENS=4096
 OPENAI_TEMPERATURE=0.7
 
@@ -181,7 +181,7 @@ curl -X POST http://localhost:8000/api/v1/conversations \
   -H "Content-Type: application/json" \
   -d '{
     "title": "New Chat",
-    "model": "gpt-4",
+    "model": "gpt-5",
     "system_prompt": "You are a helpful assistant"
   }'
 ```

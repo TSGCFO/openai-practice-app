@@ -108,7 +108,7 @@ The system follows a microservices architecture with clear separation of concern
 
 ### AI/ML
 
-- **LLM**: OpenAI GPT-4/GPT-3.5
+- **LLM**: OpenAI GPT-5/GPT-5
 - **Embeddings**: OpenAI text-embedding-3
 - **Function Calling**: OpenAI Functions API
 
@@ -176,7 +176,7 @@ eslint frontend/
 ```env
 # OpenAI Configuration
 OPENAI_API_KEY=sk-...
-OPENAI_MODEL=gpt-4
+OPENAI_MODEL=gpt-5
 OPENAI_MAX_TOKENS=4096
 
 # Database Configuration

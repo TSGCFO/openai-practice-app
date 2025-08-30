@@ -1485,7 +1485,7 @@ class DefaultValueFallback:
                 'notifications': True
             },
             'model_config': {
-                'model': 'gpt-3.5-turbo',
+                'model': 'gpt-5',
                 'temperature': 0.7,
                 'max_tokens': 1000
             }

@@ -128,7 +128,7 @@ REDIS_SSL=false
 
 # OpenAI
 OPENAI_API_KEY=sk-...
-OPENAI_MODEL=gpt-4
+OPENAI_MODEL=gpt-5
 OPENAI_MAX_TOKENS=4096
 OPENAI_TEMPERATURE=0.7
 
@@ -428,7 +428,7 @@ data:
   APP_NAME: "AI Assistant"
   ENVIRONMENT: "production"
   LOG_LEVEL: "INFO"
-  OPENAI_MODEL: "gpt-4"
+  OPENAI_MODEL: "gpt-5"
   OPENAI_MAX_TOKENS: "4096"
   OPENAI_TEMPERATURE: "0.7"
   PROMETHEUS_ENABLED: "true"
@@ -843,7 +843,7 @@ ingress:
 
 config:
   openai:
-    model: gpt-4
+    model: gpt-5
     maxTokens: 4096
     temperature: 0.7
   rateLimit:
