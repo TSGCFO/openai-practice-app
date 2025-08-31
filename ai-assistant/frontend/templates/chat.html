@@ -1,0 +1,445 @@
+{% extends "base.html" %}
+
+{% block title %}Chat - AI Assistant{% endblock %}
+
+{% block head %}
+<style>
+    .chat-container {
+        height: calc(100vh - 150px);
+        display: flex;
+    }
+    
+    .conversations-list {
+        width: 250px;
+        border-right: 1px solid #dee2e6;
+        overflow-y: auto;
+    }
+    
+    .chat-main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .messages-container {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+        background: #f8f9fa;
+    }
+    
+    .message {
+        margin-bottom: 15px;
+        display: flex;
+        align-items: flex-start;
+    }
+    
+    .message.user {
+        justify-content: flex-end;
+    }
+    
+    .message-content {
+        max-width: 70%;
+        padding: 10px 15px;
+        border-radius: 10px;
+        word-wrap: break-word;
+    }
+    
+    .message.user .message-content {
+        background: #007bff;
+        color: white;
+    }
+    
+    .message.assistant .message-content {
+        background: white;
+        border: 1px solid #dee2e6;
+    }
+    
+    .message-avatar {
+        width: 35px;
+        height: 35px;
+        border-radius: 50%;
+        margin: 0 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        font-weight: bold;
+    }
+    
+    .message.user .message-avatar {
+        background: #007bff;
+        color: white;
+        order: 1;
+    }
+    
+    .message.assistant .message-avatar {
+        background: #6c757d;
+        color: white;
+    }
+    
+    .input-container {
+        padding: 20px;
+        border-top: 1px solid #dee2e6;
+        background: white;
+    }
+    
+    .typing-indicator {
+        display: none;
+        padding: 10px;
+        font-style: italic;
+        color: #6c757d;
+    }
+    
+    .tool-card {
+        background: #f0f8ff;
+        border: 1px solid #b0d4ff;
+        border-radius: 8px;
+        padding: 10px;
+        margin: 10px 0;
+    }
+    
+    .tool-card .tool-header {
+        font-weight: bold;
+        color: #0066cc;
+        margin-bottom: 5px;
+    }
+    
+    .tool-card .tool-status {
+        font-size: 0.9em;
+        color: #666;
+    }
+    
+    .connection-status {
+        padding: 5px 10px;
+        text-align: center;
+        font-size: 0.9em;
+    }
+    
+    .connection-status.connected {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .connection-status.disconnected {
+        background: #f8d7da;
+        color: #721c24;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="chat-container">
+    <!-- Conversations List -->
+    <div class="conversations-list bg-white">
+        <div class="p-3">
+            <button class="btn btn-primary btn-sm w-100" onclick="createNewConversation()">
+                <i class="fas fa-plus"></i> New Chat
+            </button>
+        </div>
+        <div id="conversationsList" class="list-group list-group-flush">
+            <!-- Conversations will be loaded here -->
+        </div>
+    </div>
+    
+    <!-- Chat Main Area -->
+    <div class="chat-main">
+        <!-- Connection Status -->
+        <div id="connectionStatus" class="connection-status disconnected">
+            <i class="fas fa-circle"></i> <span id="statusText">Disconnected</span>
+        </div>
+        
+        <!-- Messages Container -->
+        <div id="messagesContainer" class="messages-container">
+            <div class="text-center text-muted py-5">
+                <i class="fas fa-comments fa-3x mb-3"></i>
+                <p>Select a conversation or start a new chat</p>
+            </div>
+        </div>
+        
+        <!-- Typing Indicator -->
+        <div id="typingIndicator" class="typing-indicator">
+            <i class="fas fa-ellipsis-h"></i> AI is typing...
+        </div>
+        
+        <!-- Input Container -->
+        <div class="input-container">
+            <div class="input-group">
+                <textarea 
+                    id="messageInput" 
+                    class="form-control" 
+                    placeholder="Type your message here..."
+                    rows="2"
+                    disabled
+                ></textarea>
+                <button id="sendButton" class="btn btn-primary" onclick="sendMessage()" disabled>
+                    <i class="fas fa-paper-plane"></i> Send
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // WebSocket connection
+    let socket = null;
+    let currentConversationId = null;
+    let isStreaming = false;
+    let messageBuffer = '';
+
+    // Initialize on page load
+    $(document).ready(function() {
+        initializeWebSocket();
+        loadConversations();
+        
+        // Enable Enter key to send message
+        $('#messageInput').keypress(function(e) {
+            if (e.which == 13 && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    });
+
+    function initializeWebSocket() {
+        socket = io({
+            transports: ['websocket'],
+            upgrade: false
+        });
+
+        // Connection events
+        socket.on('connect', () => {
+            console.log('Connected to server');
+            updateConnectionStatus(true);
+            if (currentConversationId) {
+                socket.emit('join_conversation', {
+                    conversation_id: currentConversationId
+                });
+            }
+        });
+
+        socket.on('disconnect', () => {
+            console.log('Disconnected from server');
+            updateConnectionStatus(false);
+        });
+
+        // Message events
+        socket.on('token', (data) => {
+            handleToken(data);
+        });
+
+        socket.on('tool_request', (data) => {
+            handleToolRequest(data);
+        });
+
+        socket.on('tool_result', (data) => {
+            handleToolResult(data);
+        });
+
+        socket.on('complete', (data) => {
+            handleComplete(data);
+        });
+
+        socket.on('error', (data) => {
+            handleError(data);
+        });
+    }
+
+    function updateConnectionStatus(connected) {
+        const statusEl = $('#connectionStatus');
+        const statusText = $('#statusText');
+        
+        if (connected) {
+            statusEl.removeClass('disconnected').addClass('connected');
+            statusText.text('Connected');
+            $('#messageInput').prop('disabled', false);
+            $('#sendButton').prop('disabled', false);
+        } else {
+            statusEl.removeClass('connected').addClass('disconnected');
+            statusText.text('Disconnected');
+            $('#messageInput').prop('disabled', true);
+            $('#sendButton').prop('disabled', true);
+        }
+    }
+
+    function loadConversations() {
+        fetch('/api/conversations')
+            .then(response => response.json())
+            .then(data => {
+                const listEl = $('#conversationsList');
+                listEl.empty();
+                
+                if (data.data && data.data.length > 0) {
+                    data.data.forEach(conv => {
+                        const item = $(`
+                            <a href="#" class="list-group-item list-group-item-action" 
+                               data-conversation-id="${conv.id}">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">${conv.title || 'Untitled'}</h6>
+                                </div>
+                                <small class="text-muted">${new Date(conv.created_at).toLocaleDateString()}</small>
+                            </a>
+                        `);
+                        item.click(function(e) {
+                            e.preventDefault();
+                            selectConversation(conv.id);
+                        });
+                        listEl.append(item);
+                    });
+                }
+            })
+            .catch(error => console.error('Error loading conversations:', error));
+    }
+
+    function createNewConversation() {
+        const title = prompt('Enter conversation title:');
+        if (!title) return;
+        
+        fetch('/api/conversations', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ title: title })
+        })
+        .then(response => response.json())
+        .then(data => {
+            loadConversations();
+            selectConversation(data.id);
+        })
+        .catch(error => console.error('Error creating conversation:', error));
+    }
+
+    function selectConversation(conversationId) {
+        currentConversationId = conversationId;
+        
+        // Update UI
+        $('.list-group-item').removeClass('active');
+        $(`.list-group-item[data-conversation-id="${conversationId}"]`).addClass('active');
+        
+        // Clear messages
+        $('#messagesContainer').empty();
+        
+        // Join conversation room
+        socket.emit('join_conversation', {
+            conversation_id: conversationId
+        });
+        
+        // Load conversation history
+        loadConversationHistory(conversationId);
+    }
+
+    function loadConversationHistory(conversationId) {
+        // In a real implementation, this would fetch message history
+        // For now, just show a welcome message
+        $('#messagesContainer').html(`
+            <div class="text-center text-muted py-3">
+                <p>Conversation loaded. Start chatting!</p>
+            </div>
+        `);
+    }
+
+    function sendMessage() {
+        const input = $('#messageInput');
+        const message = input.val().trim();
+        
+        if (!message || !currentConversationId || isStreaming) return;
+        
+        // Display user message
+        displayMessage('user', message);
+        
+        // Clear input
+        input.val('');
+        
+        // Start streaming
+        isStreaming = true;
+        messageBuffer = '';
+        $('#typingIndicator').show();
+        
+        // Send via WebSocket
+        socket.emit('send_message', {
+            conversation_id: currentConversationId,
+            message: message
+        });
+    }
+
+    function displayMessage(role, content) {
+        const messagesContainer = $('#messagesContainer');
+        
+        const avatar = role === 'user' ? 'U' : 'AI';
+        const message = $(`
+            <div class="message ${role}">
+                <div class="message-avatar">${avatar}</div>
+                <div class="message-content">${escapeHtml(content)}</div>
+            </div>
+        `);
+        
+        messagesContainer.append(message);
+        messagesContainer.scrollTop(messagesContainer[0].scrollHeight);
+    }
+
+    function handleToken(data) {
+        // Append token to buffer
+        messageBuffer += data.content || data.text || '';
+        
+        // Update or create assistant message
+        let assistantMessage = $('.message.assistant:last-child .message-content');
+        if (assistantMessage.length === 0) {
+            displayMessage('assistant', messageBuffer);
+        } else {
+            assistantMessage.html(escapeHtml(messageBuffer));
+        }
+        
+        // Scroll to bottom
+        const container = $('#messagesContainer');
+        container.scrollTop(container[0].scrollHeight);
+    }
+
+    function handleToolRequest(data) {
+        const toolCard = $(`
+            <div class="tool-card">
+                <div class="tool-header">
+                    <i class="fas fa-tools"></i> Tool: ${data.tool_id || data.tool_slug}
+                </div>
+                <div class="tool-status">Executing...</div>
+            </div>
+        `);
+        $('#messagesContainer').append(toolCard);
+    }
+
+    function handleToolResult(data) {
+        $('.tool-card:last-child .tool-status').text('Completed');
+    }
+
+    function handleComplete(data) {
+        isStreaming = false;
+        $('#typingIndicator').hide();
+        messageBuffer = '';
+    }
+
+    function handleError(data) {
+        isStreaming = false;
+        $('#typingIndicator').hide();
+        
+        const errorMessage = $(`
+            <div class="alert alert-danger mx-3">
+                <i class="fas fa-exclamation-triangle"></i> Error: ${data.error || 'An error occurred'}
+            </div>
+        `);
+        $('#messagesContainer').append(errorMessage);
+    }
+
+    function escapeHtml(text) {
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.replace(/[&<>"']/g, m => map[m]);
+    }
+</script>
+{% endblock %}

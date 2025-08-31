@@ -1,0 +1,134 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:14-alpine
+    container_name: ai_assistant_postgres
+    environment:
+      POSTGRES_DB: ai_assistant
+      POSTGRES_USER: ai_user
+      POSTGRES_PASSWORD: ai_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schemas/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ai_user -d ai_assistant"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ai_network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: ai_assistant_redis
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ai_network
+
+  # Flask Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ai_assistant_frontend
+    env_file:
+      - .env
+    environment:
+      FLASK_APP: app.py
+      FLASK_ENV: development
+      DATABASE_URL: postgresql://ai_user:ai_password@postgres:5432/ai_assistant
+      REDIS_URL: redis://redis:6379/0
+      ORCHESTRATOR_URL: http://orchestrator:8000
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./frontend:/app
+    networks:
+      - ai_network
+    restart: unless-stopped
+
+  # FastAPI Orchestrator
+  orchestrator:
+    build:
+      context: ./orchestrator
+      dockerfile: Dockerfile
+    container_name: ai_assistant_orchestrator
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://ai_user:ai_password@postgres:5432/ai_assistant
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./orchestrator:/app
+    networks:
+      - ai_network
+    restart: unless-stopped
+
+  # Email Tools MCP Server
+  mcp-email:
+    build:
+      context: ./mcp_servers/email_tools
+      dockerfile: Dockerfile
+    container_name: ai_assistant_mcp_email
+    env_file:
+      - .env
+    ports:
+      - "8001:8001"
+    depends_on:
+      - redis
+    networks:
+      - ai_network
+    restart: unless-stopped
+
+  # Database Tools MCP Server
+  mcp-database:
+    build:
+      context: ./mcp_servers/database_tools
+      dockerfile: Dockerfile
+    container_name: ai_assistant_mcp_database
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://ai_user:ai_password@postgres:5432/ai_assistant
+    ports:
+      - "8002:8002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - ai_network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  ai_network:
+    driver: bridge

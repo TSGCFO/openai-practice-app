@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}AI Assistant - Home{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-8 text-center">
+            <h1 class="display-4">Welcome to AI Assistant</h1>
+            <p class="lead">Your intelligent companion powered by advanced AI technology.</p>
+            <hr class="my-4">
+            <p>Experience seamless conversations, task automation, and intelligent insights.</p>
+            <a class="btn btn-primary btn-lg" href="/chat" role="button">Start Chatting</a>
+            {% if not current_user.is_authenticated %}
+            <a class="btn btn-outline-secondary btn-lg ms-2" href="/login" role="button">Login</a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="row mt-5">
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Intelligent Responses</h5>
+                    <p class="card-text">Get accurate and context-aware answers to your queries.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Task Automation</h5>
+                    <p class="card-text">Automate routine tasks with integrated tools.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Secure & Private</h5>
+                    <p class="card-text">Your data is protected with enterprise-grade security.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
